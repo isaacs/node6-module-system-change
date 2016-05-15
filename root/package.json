@@ -1,0 +1,9 @@
+{
+  "name": "root",
+  "version": "1.0.0",
+  "dependencies": {
+    "shared-dep": "1",
+    "conflict-dep": "1",
+    "dep":"1"
+  }
+}
