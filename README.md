@@ -146,7 +146,7 @@ index 82b1971..45d8e66 100644
 ```
 
 I'm not sure if this is a good idea!  It might be bad!  It could
-load things that you don't want loaded, but at least it'd only happy
+load things that you don't want loaded, but at least it'd only happen
 as a *lower* priority lookup than the other established behavior that
 the module ecosystem has come to rely on.
 
