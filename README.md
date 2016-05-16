@@ -71,3 +71,77 @@ having no impact on the correctness of programs, however.)
 
 In the second case, when a *file* is symlinked into the `node_modules`
 folder, this breaks entirely where it used to work.
+
+## The bug being fixed
+
+The "bug" being addressed by the change to the module system is this:
+
+If a module is symbolically linked into a `node_modules` folder along
+with one or more peer dependencies, then they will not be able to find
+the "root" module to attach onto.
+
+You can demonstrate this by running:
+
+```
+$ node the-bug
+module.js:341
+    throw err;
+    ^
+
+Error: Cannot find module 'peer-dep'
+    at Function.Module._resolveFilename (module.js:339:15)
+    at Function.Module._load (module.js:290:25)
+    at Module.require (module.js:367:17)
+    at require (internal/module.js:16:19)
+    at Object.<anonymous> (/Users/isaacs/dev/js/node6-module-system-change/peer-user-1/index.js:1:63)
+    at Module._compile (module.js:413:34)
+    at Object.Module._extensions..js (module.js:422:10)
+    at Module.load (module.js:357:32)
+    at Function.Module._load (module.js:314:12)
+    at Module.require (module.js:367:17)
+
+$ nave use 6
+
+$ node the-bug
+{ filename: '/Users/isaacs/dev/js/node6-module-system-change/the-bug/node_modules/peer-dep/index.js',
+  one: 1,
+  two: 2 }
+```
+
+I am not convinced that this is a bug, rather than merely a limitation
+of what the node module system can do.  Nevertheless, it can be worked
+around easily, and fixed in a less hazardous manner.
+
+### Workaround: `NODE_PATH` environment variable
+
+```
+$ NODE_PATH=$PWD/the-bug/node_modules node the-bug
+{ filename: '/Users/isaacs/dev/js/node6-module-system-change/peer-dep/index.js',
+  one: 1,
+  two: 2 }
+```
+
+### Proposal: Add `require.main.paths` to all module lookup paths
+
+This patch should do it:
+
+```diff
+diff --git a/lib/module.js b/lib/module.js
+index 82b1971..45d8e66 100644
+--- a/lib/module.js
++++ b/lib/module.js
+@@ -230,6 +230,11 @@ Module._resolveLookupPaths = function(request, parent) {
+       paths = parent.paths.concat(paths);
+     }
+ 
++    if (process.mainModule && parent !== process.mainModule) {
++      if (!process.mainModule.paths) process.mainModule.paths = [];
++      paths = paths.concat(process.mainModule.paths);
++    }
++
+     // Maintain backwards compat with certain broken uses of require('.')
+     // by putting the module's directory in front of the lookup paths.
+     if (request === '.') {
+
+```
+
