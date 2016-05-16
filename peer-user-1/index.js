@@ -1,1 +1,1 @@
-require('peer-dep').one = 1
+require('peer-dep').one = module.paths.slice(0)

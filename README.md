@@ -213,3 +213,66 @@ index 82b1971..1fb6a1f 100644
      if (request === '.') {
 
 ```
+
+### Use parent paths, secondary (introspectable) proposal
+
+Here's another way to do that, which is inspectable:
+
+```diff
+diff --git a/lib/module.js b/lib/module.js
+index ccbb5ba..fb6a831 100644
+--- a/lib/module.js
++++ b/lib/module.js
+@@ -453,6 +453,15 @@ Module.prototype.load = function(filename) {
+   this.filename = filename;
+   this.paths = Module._nodeModulePaths(path.dirname(filename));
+ 
++  if (this.parent && this.parent.paths) {
++    for (let p = 0; p < this.parent.paths.length; p++) {
++      if (this.paths.indexOf(this.parent.paths[p]) === -1) {
++        this.paths.push(this.parent.paths[p]);
++      }
++    }
++  }
++
++
+   var extension = path.extname(filename) || '.js';
+   if (!Module._extensions[extension]) extension = '.js';
+   Module._extensions[extension](this, filename);
+
+```
+
+The result:
+
+```
+$ node the-bug
+{ filename: '/Users/isaacs/dev/js/node6-module-system-change/peer-dep/index.js',
+  paths:
+   [ '/Users/isaacs/dev/js/node6-module-system-change/peer-dep/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/node_modules',
+     '/Users/isaacs/dev/js/node_modules',
+     '/Users/isaacs/dev/node_modules',
+     '/Users/isaacs/node_modules',
+     '/Users/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/peer-user-1/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/the-bug/node_modules' ],
+  one: 
+   [ '/Users/isaacs/dev/js/node6-module-system-change/peer-user-1/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/node_modules',
+     '/Users/isaacs/dev/js/node_modules',
+     '/Users/isaacs/dev/node_modules',
+     '/Users/isaacs/node_modules',
+     '/Users/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/the-bug/node_modules' ],
+  two: 
+   [ '/Users/isaacs/dev/js/node6-module-system-change/peer-user-2/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/node_modules',
+     '/Users/isaacs/dev/js/node_modules',
+     '/Users/isaacs/dev/node_modules',
+     '/Users/isaacs/node_modules',
+     '/Users/node_modules',
+     '/Users/isaacs/dev/js/node6-module-system-change/the-bug/node_modules' ] }
+```
+
+I believe that this is the best way to support peer dependencies
+without breaking the node module ecosystem.
