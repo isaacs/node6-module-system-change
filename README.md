@@ -176,9 +176,14 @@ index 82b1971..f2d82a0 100644
 This would handle the case where a module with some peer dependencies
 is not installed in the `node_modules` of the `main` module's root.
 So, for example, if a module loaded `the-bug` as a dep, deep in a
-`node_modules` heirarchy (which would require a very *interesting*
-hybrid package management strategy!), then this would ensure that
+`node_modules` heirarchy <del>(which would require a very *interesting*
+hybrid package management strategy!)</del>, then this would ensure that
 modules always have their parent's lookup paths.
+
+**UPDATE**: Actually the package layout strategy wouldn't have to be
+all that interesting.  If you have a pnpm/ied-style symlink-based
+system, then a nested peer-dep needs to have a lookup path that has
+paths not in the main module's set.
 
 However, this gets pretty long pretty fast!  Probably you'd want to do
 some de-duping, so that you don't have a 100,000 item list of folders
