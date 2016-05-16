@@ -149,3 +149,62 @@ I'm not sure if this is a good idea!  It might be bad!  It could
 load things that you don't want loaded, but at least it'd only happy
 as a *lower* priority lookup than the other established behavior that
 the module ecosystem has come to rely on.
+
+### Proposal: Add `module.parent.paths` to module lookup paths
+
+Even shorter patch:
+
+```diff
+diff --git a/lib/module.js b/lib/module.js
+index 82b1971..f2d82a0 100644
+--- a/lib/module.js
++++ b/lib/module.js
+@@ -230,6 +230,10 @@ Module._resolveLookupPaths = function(request, parent) {
+       paths = parent.paths.concat(paths);
+     }
+ 
++    if (parent && parent.parent && parent.parent.paths) {
++      paths = paths.concat(parent.parent.paths);
++    }
++
+     // Maintain backwards compat with certain broken uses of require('.')
+     // by putting the module's directory in front of the lookup paths.
+     if (request === '.') {
+
+```
+
+This would handle the case where a module with some peer dependencies
+is not installed in the `node_modules` of the `main` module's root.
+So, for example, if a module loaded `the-bug` as a dep, deep in a
+`node_modules` heirarchy (which would require a very *interesting*
+hybrid package management strategy!), then this would ensure that
+modules always have their parent's lookup paths.
+
+However, this gets pretty long pretty fast!  Probably you'd want to do
+some de-duping, so that you don't have a 100,000 item list of folders
+to search, most of which would be the same folders.
+
+Longer patch:
+
+```diff
+diff --git a/lib/module.js b/lib/module.js
+index 82b1971..1fb6a1f 100644
+--- a/lib/module.js
++++ b/lib/module.js
+@@ -230,6 +230,14 @@ Module._resolveLookupPaths = function(request, parent) {
+       paths = parent.paths.concat(paths);
+     }
+ 
++    if (parent && parent.parent && parent.parent.paths) {
++      for (var p = 0; p < parent.parent.paths.length; p++) {
++        if (paths.indexOf(parent.parent.paths[p]) === -1) {
++          paths.push(parent.parent.paths[p]);
++        }
++      }
++    }
++
+     // Maintain backwards compat with certain broken uses of require('.')
+     // by putting the module's directory in front of the lookup paths.
+     if (request === '.') {
+
+```
